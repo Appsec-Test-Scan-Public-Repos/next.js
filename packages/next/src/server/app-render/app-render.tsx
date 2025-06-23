@@ -1492,7 +1492,9 @@ async function renderToHTMLOrFlightImpl(
   } else {
     // We're rendering dynamically
     const renderResumeDataCache =
-      renderOpts.renderResumeDataCache ?? postponedState?.renderResumeDataCache
+      renderOpts.renderResumeDataCache ??
+      postponedState?.renderResumeDataCache ??
+      null
 
     const rootParams = getRootParams(loaderTree, ctx.getDynamicParamFromSegment)
     const requestStore = createRequestStoreForRender(
@@ -1546,6 +1548,9 @@ async function renderToHTMLOrFlightImpl(
 
     let formState: null | any = null
     if (isPossibleActionRequest) {
+      // For action requests, we don't want to use the resume data cache.
+      requestStore.renderResumeDataCache = null
+
       // For action requests, we handle them differently with a special render result.
       const actionRequestResult = await handleAction({
         req,
@@ -1589,6 +1594,9 @@ async function renderToHTMLOrFlightImpl(
           }
         }
       }
+
+      // Restore the resume data cache
+      requestStore.renderResumeDataCache = renderResumeDataCache
     }
 
     const options: RenderResultOptions = {
