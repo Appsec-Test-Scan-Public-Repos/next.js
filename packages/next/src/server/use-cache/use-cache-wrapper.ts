@@ -51,7 +51,6 @@ import { getCacheHandler } from './handlers'
 import { UseCacheTimeoutError } from './use-cache-errors'
 import {
   createHangingInputAbortSignal,
-  postponeWithTracking,
   throwToInterruptStaticGeneration,
 } from '../app-render/dynamic-rendering'
 import {
@@ -210,7 +209,6 @@ function createUseCacheStore(
           useCacheOrRequestStore = outerWorkUnitStore
           break
         case 'prerender':
-        case 'prerender-ppr':
         case 'prerender-legacy':
         case 'unstable-cache':
           break
@@ -343,7 +341,6 @@ function propagateCacheLifeAndTags(
       case 'cache':
       case 'private-cache':
       case 'prerender':
-      case 'prerender-ppr':
       case 'prerender-legacy':
         propagateCacheLifeAndTagsToRevalidateStore(
           cacheContext.outerWorkUnitStore,
@@ -507,7 +504,6 @@ async function generateCacheEntryImpl(
                       }
                     })
                     break
-                  case 'prerender-ppr':
                   case 'prerender-legacy':
                   case 'request':
                   case 'cache':
@@ -642,7 +638,6 @@ async function generateCacheEntryImpl(
         stream = prelude
       }
       break
-    case 'prerender-ppr':
     case 'prerender-legacy':
     case 'request':
     case 'cache':
@@ -825,12 +820,6 @@ export function cache(
           // "use cache: private" is dynamic in prerendering contexts.
           case 'prerender':
             return makeHangingPromise(workUnitStore.renderSignal, expression)
-          case 'prerender-ppr':
-            return postponeWithTracking(
-              workStore.route,
-              expression,
-              workUnitStore.dynamicTracking
-            )
           case 'prerender-legacy':
             return throwToInterruptStaticGeneration(
               expression,
@@ -891,7 +880,6 @@ export function cache(
               `${expression} must not be used within a client component. Next.js should be preventing ${expression} from being allowed in client components statically, but did not in this case.`
             )
           case 'prerender':
-          case 'prerender-ppr':
           case 'prerender-legacy':
           case 'request':
           case 'cache':
@@ -1074,7 +1062,6 @@ export function cache(
             break
           }
         // fallthrough
-        case 'prerender-ppr':
         case 'prerender-legacy':
         case 'request':
         case 'cache':
@@ -1135,7 +1122,6 @@ export function cache(
                     workUnitStore.renderSignal,
                     'dynamic "use cache"'
                   )
-                case 'prerender-ppr':
                 case 'prerender-legacy':
                 case 'request':
                 case 'cache':
@@ -1192,7 +1178,6 @@ export function cache(
                   )
                 }
                 break
-              case 'prerender-ppr':
               case 'prerender-legacy':
               case 'request':
               case 'cache':
@@ -1288,7 +1273,6 @@ export function cache(
                 workUnitStore.renderSignal,
                 'dynamic "use cache"'
               )
-            case 'prerender-ppr':
             case 'prerender-legacy':
             case 'request':
             case 'cache':
@@ -1538,7 +1522,6 @@ function shouldForceRevalidate(
         return workUnitStore.forceRevalidate
       case 'prerender':
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
       case 'unstable-cache':
         break
@@ -1580,7 +1563,6 @@ function shouldDiscardCacheEntry(
       case 'prerender':
         return false
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
       case 'request':
       case 'cache':

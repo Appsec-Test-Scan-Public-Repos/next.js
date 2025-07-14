@@ -764,5 +764,10 @@
   "763": "\\`unstable_rootParams\\` must not be used within a client component. Next.js should be preventing it from being included in client components statically, but did not in this case.",
   "764": "Missing workStore in %s",
   "765": "Route %s used %s inside a Route Handler. Support for this API in Route Handlers is planned for a future version of Next.js.",
-  "766": "%s was used inside a Server Action. This is not supported. Functions from 'next/root-params' can only be called in the context of a route."
+  "766": "%s was used inside a Server Action. This is not supported. Functions from 'next/root-params' can only be called in the context of a route.",
+  "767": "Invariant: page postponed without cache components being enabled",
+  "768": "createPrerenderPathname cannot be called with the prerender-legacy work unit type.",
+  "769": "\\`experimental.ppr\\` cannot be set to \"incremental\" as cache components does not support it. Please remove it from %s.",
+  "770": "Invariant: cache components cannot be enabled in export mode",
+  "771": "\\`experimental.ppr\\` and \\`experimental.cacheComponents\\` cannot be set to different values. Please remove \\`experimental.ppr\\` from %s."
 }

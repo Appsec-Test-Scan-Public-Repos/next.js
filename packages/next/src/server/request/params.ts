@@ -1,18 +1,11 @@
 import type { WorkStore } from '../app-render/work-async-storage.external'
-import type { FallbackRouteParams } from './fallback-params'
 
 import { ReflectAdapter } from '../web/spec-extension/adapters/reflect'
-import {
-  throwToInterruptStaticGeneration,
-  postponeWithTracking,
-  trackSynchronousRequestDataAccessInDev,
-} from '../app-render/dynamic-rendering'
+import { trackSynchronousRequestDataAccessInDev } from '../app-render/dynamic-rendering'
 
 import {
   workUnitAsyncStorage,
   type PrerenderStore,
-  type PrerenderStorePPR,
-  type PrerenderStoreLegacy,
   type PrerenderStoreModern,
 } from '../app-render/work-unit-async-storage.external'
 import { InvariantError } from '../../shared/lib/invariant-error'
@@ -65,9 +58,8 @@ export function createParamsFromClient(
     switch (workUnitStore.type) {
       case 'prerender':
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
-        return createPrerenderParams(underlyingParams, workStore, workUnitStore)
+        return createPrerenderParams(underlyingParams, workUnitStore)
       case 'cache':
       case 'private-cache':
       case 'unstable-cache':
@@ -97,9 +89,8 @@ export function createServerParamsForRoute(
     switch (workUnitStore.type) {
       case 'prerender':
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
-        return createPrerenderParams(underlyingParams, workStore, workUnitStore)
+        return createPrerenderParams(underlyingParams, workUnitStore)
       case 'cache':
       case 'private-cache':
       case 'unstable-cache':
@@ -124,9 +115,8 @@ export function createServerParamsForServerSegment(
     switch (workUnitStore.type) {
       case 'prerender':
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
-        return createPrerenderParams(underlyingParams, workStore, workUnitStore)
+        return createPrerenderParams(underlyingParams, workUnitStore)
       case 'cache':
       case 'private-cache':
       case 'unstable-cache':
@@ -169,7 +159,6 @@ export function createPrerenderParamsForClientSegment(
         throw new InvariantError(
           'createPrerenderParamsForClientSegment should not be called in cache contexts.'
         )
-      case 'prerender-ppr':
       case 'prerender-legacy':
       case 'request':
         break
@@ -185,7 +174,6 @@ export function createPrerenderParamsForClientSegment(
 
 function createPrerenderParams(
   underlyingParams: Params,
-  workStore: WorkStore,
   prerenderStore: PrerenderStore
 ): Promise<Params> {
   switch (prerenderStore.type) {
@@ -200,22 +188,6 @@ function createPrerenderParams(
             // we are in cacheComponents mode we encode this as a promise that never
             // resolves.
             return makeHangingParams(underlyingParams, prerenderStore)
-          }
-        }
-      }
-      break
-    }
-    case 'prerender-ppr': {
-      const fallbackParams = prerenderStore.fallbackRouteParams
-      if (fallbackParams) {
-        for (const key in underlyingParams) {
-          if (fallbackParams.has(key)) {
-            return makeErroringExoticParams(
-              underlyingParams,
-              fallbackParams,
-              workStore,
-              prerenderStore
-            )
           }
         }
       }
@@ -304,102 +276,6 @@ function makeHangingParams(
   )
 
   CachedParams.set(underlyingParams, promise)
-
-  return promise
-}
-
-function makeErroringExoticParams(
-  underlyingParams: Params,
-  fallbackParams: FallbackRouteParams,
-  workStore: WorkStore,
-  prerenderStore: PrerenderStorePPR | PrerenderStoreLegacy
-): Promise<Params> {
-  const cachedParams = CachedParams.get(underlyingParams)
-  if (cachedParams) {
-    return cachedParams
-  }
-
-  const augmentedUnderlying = { ...underlyingParams }
-
-  // We don't use makeResolvedReactPromise here because params
-  // supports copying with spread and we don't want to unnecessarily
-  // instrument the promise with spreadable properties of ReactPromise.
-  const promise = Promise.resolve(augmentedUnderlying)
-  CachedParams.set(underlyingParams, promise)
-
-  Object.keys(underlyingParams).forEach((prop) => {
-    if (wellKnownProperties.has(prop)) {
-      // These properties cannot be shadowed because they need to be the
-      // true underlying value for Promises to work correctly at runtime
-    } else {
-      if (fallbackParams.has(prop)) {
-        Object.defineProperty(augmentedUnderlying, prop, {
-          get() {
-            const expression = describeStringPropertyAccess('params', prop)
-            // In most dynamic APIs we also throw if `dynamic = "error"` however
-            // for params is only dynamic when we're generating a fallback shell
-            // and even when `dynamic = "error"` we still support generating dynamic
-            // fallback shells
-            // TODO remove this comment when cacheComponents is the default since there
-            // will be no `dynamic = "error"`
-            if (prerenderStore.type === 'prerender-ppr') {
-              // PPR Prerender (no cacheComponents)
-              postponeWithTracking(
-                workStore.route,
-                expression,
-                prerenderStore.dynamicTracking
-              )
-            } else {
-              // Legacy Prerender
-              throwToInterruptStaticGeneration(
-                expression,
-                workStore,
-                prerenderStore
-              )
-            }
-          },
-          enumerable: true,
-        })
-        Object.defineProperty(promise, prop, {
-          get() {
-            const expression = describeStringPropertyAccess('params', prop)
-            // In most dynamic APIs we also throw if `dynamic = "error"` however
-            // for params is only dynamic when we're generating a fallback shell
-            // and even when `dynamic = "error"` we still support generating dynamic
-            // fallback shells
-            // TODO remove this comment when cacheComponents is the default since there
-            // will be no `dynamic = "error"`
-            if (prerenderStore.type === 'prerender-ppr') {
-              // PPR Prerender (no cacheComponents)
-              postponeWithTracking(
-                workStore.route,
-                expression,
-                prerenderStore.dynamicTracking
-              )
-            } else {
-              // Legacy Prerender
-              throwToInterruptStaticGeneration(
-                expression,
-                workStore,
-                prerenderStore
-              )
-            }
-          },
-          set(newValue) {
-            Object.defineProperty(promise, prop, {
-              value: newValue,
-              writable: true,
-              enumerable: true,
-            })
-          },
-          enumerable: true,
-          configurable: true,
-        })
-      } else {
-        ;(promise as any)[prop] = underlyingParams[prop]
-      }
-    }
-  })
 
   return promise
 }
@@ -578,7 +454,6 @@ function syncIODev(
         break
       case 'prerender':
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
       case 'cache':
       case 'private-cache':

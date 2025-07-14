@@ -143,7 +143,6 @@ function patchConsoleMethodDEV(methodName: InterceptableConsoleMethod): void {
         case 'prerender-client':
           originalMethod.apply(this, dimConsoleCall(methodName, args))
           break
-        case 'prerender-ppr':
         case 'prerender-legacy':
         case 'request':
         case 'cache':

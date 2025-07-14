@@ -366,7 +366,7 @@ export default function LinkComponent(
   const fetchStrategy =
     prefetchProp === null || prefetchProp === 'auto'
       ? // We default to PPR. We'll discover whether or not the route supports it with the initial prefetch.
-        FetchStrategy.PPR
+        FetchStrategy.CacheComponents
       : FetchStrategy.Full
 
   if (process.env.NODE_ENV !== 'production') {

@@ -370,7 +370,7 @@ function prefetchWithOldCacheImplementation(instance: PrefetchableInstance) {
 
     let prefetchKind: PrefetchKind
     switch (instance.fetchStrategy) {
-      case FetchStrategy.PPR: {
+      case FetchStrategy.CacheComponents: {
         prefetchKind = PrefetchKind.AUTO
         break
       }
