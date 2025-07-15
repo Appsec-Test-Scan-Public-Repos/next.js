@@ -43,22 +43,6 @@ export type {
 
 export type { Instrumentation } from './server/instrumentation/types'
 
-/**
- * Stub route type for typedRoutes before `next dev` or `next build` is run
- * @link https://nextjs.org/docs/app/api-reference/config/typescript#statically-typed-links
- * @example
- * ```ts
- * import type { Route } from 'next'
- * // ...
- * router.push(returnToPath as Route)
- * ```
- */
-
-// `RouteInferType` is a stub here to avoid breaking `typedRoutes` when the type
-// isn't generated yet. It will be replaced when the webpack plugin runs.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type Route<RouteInferType = any> = string & {}
-
 // Extend the React types with missing properties
 declare module 'react' {
   // <html amp=""> support

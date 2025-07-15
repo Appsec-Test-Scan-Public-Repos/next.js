@@ -33,7 +33,7 @@ type OptionalKeys<T> = {
 
 type OnNavigateEventHandler = (event: { preventDefault: () => void }) => void
 
-type InternalLinkPropsBase = {
+export type InternalLinkProps = {
   /**
    * @deprecated v10.0.0: `href` props pointing to a dynamic route are
    * automatically resolved and no longer require the `as` prop.
@@ -193,71 +193,64 @@ type InternalLinkPropsBase = {
   onNavigate?: OnNavigateEventHandler
 }
 
-type InternalLinkProps = InternalLinkPropsBase &
-  (
-    | {
-        /**
-         * **Required**. The path or URL to navigate to. It can also be an object (similar to `URL`).
-         * Accepts any string for external URLs and backwards compatibility.
-         *
-         * @example
-         * ```tsx
-         * // Navigate to /dashboard:
-         * <Link href="/dashboard">Dashboard</Link>
-         *
-         * // External URL:
-         * <Link href="https://example.com">External Site</Link>
-         *
-         * // Navigate to /about?name=test:
-         * <Link href={{ pathname: '/about', query: { name: 'test' } }}>
-         *   About
-         * </Link>
-         * ```
-         *
-         * @remarks
-         * - For external URLs, use a fully qualified URL such as `https://...`.
-         * - In the App Router, dynamic routes must not include bracketed segments in `href`.
-         */
-        href: Url
+export type HrefProps = {
+  /**
+   * **Required**. The path or URL to navigate to. It can also be an object (similar to `URL`).
+   * Accepts any string for external URLs and backwards compatibility.
+   *
+   * @example
+   * ```tsx
+   * // Navigate to /dashboard:
+   * <Link href="/dashboard">Dashboard</Link>
+   *
+   * // External URL:
+   * <Link href="https://example.com">External Site</Link>
+   *
+   * // Navigate to /about?name=test:
+   * <Link href={{ pathname: '/about', query: { name: 'test' } }}>
+   *   About
+   * </Link>
+   * ```
+   *
+   * @remarks
+   * - For external URLs, use a fully qualified URL such as `https://...`.
+   * - In the App Router, dynamic routes must not include bracketed segments in `href`.
+   */
+  href: Url
 
-        /**
-         * These props are not available when using href
-         */
-        path?: never
-        params?: never
-        searchParams?: never
-      }
-    | {
-        /**
-         * The href property is not available when using path
-         */
-        href?: never
+  /**
+   * These props are not available when using href
+   */
+  path?: never
+  params?: never
+  searchParams?: never
+}
 
-        /**
-         * The route path template for typed links (e.g., '/blog/[slug]')
-         */
-        path: string
+type PathProps = {
+  /**
+   * The href property is not available when using path
+   */
+  href?: never
+  /**
+   * The route path template for typed links (e.g., '/blog/[slug]')
+   */
+  path: string
+  /**
+   * Parameters for dynamic route segments (only available with path)
+   */
+  params?: Record<string, string | string[]>
+  /**
+   * Search parameters to append to the URL (only available with path)
+   */
+  searchParams?: Record<string, string | string[]>
+}
 
-        /**
-         * Parameters for dynamic route segments (only available with path)
-         */
-        params?: Record<string, string | string[]>
-
-        /**
-         * Search parameters to append to the URL (only available with path)
-         */
-        searchParams?: Record<string, string | string[]>
-      }
-  )
+export type LinkProps = InternalLinkProps & (HrefProps | PathProps)
 
 // TODO-APP: Include the full set of Anchor props
 // adding this to the publicly exported type currently breaks existing apps
 
-// `RouteInferType` is a stub here to avoid breaking `typedRoutes` when the type
-// isn't generated yet. It will be replaced when the webpack plugin runs.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type LinkProps<RouteInferType = any> = InternalLinkProps
-type LinkPropsOptional = OptionalKeys<Omit<InternalLinkProps, 'locale'>>
+type LinkPropsOptional = OptionalKeys<Omit<LinkProps, 'locale'>>
 
 function isModifiedEvent(event: React.MouseEvent): boolean {
   const eventTarget = event.currentTarget as HTMLAnchorElement | SVGAElement
@@ -382,7 +375,7 @@ export default function LinkComponent(
     params,
     searchParams,
     ...restProps
-  } = props as any // TypeScript discriminated union handled at type level
+  } = props
 
   children = childrenProp
 
@@ -587,7 +580,7 @@ export default function LinkComponent(
 
         if (hasDynamicSegment) {
           throw new Error(
-            `Dynamic href \`${href}\` found in <Link> while using the \`/app\` router, this is not supported. Read more: https://nextjs.org/docs/messages/app-dir-dynamic-href`
+            `Dynamic href \`${href}\` found in <Link> while using the \`/app\` router, this is not supported. Instead, you should use \`path\` and \`params\` props. Read more: https://nextjs.org/docs/messages/app-dir-dynamic-href`
           )
         }
       }

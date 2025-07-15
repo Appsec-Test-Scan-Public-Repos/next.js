@@ -24,7 +24,7 @@ import { constructHref } from '../shared/lib/router/utils/construct-href'
 type Url = string | UrlObject
 type OnNavigateEventHandler = (event: { preventDefault: () => void }) => void
 
-type InternalLinkPropsBase = {
+export type InternalLinkProps = {
   /**
    * Optional decorator for the path that will be shown in the browser URL bar. Before Next.js 9.5.3 this was used for dynamic routes, check our [previous docs](https://github.com/vercel/next.js/blob/v9.5.2/docs/api-reference/next/link.md#dynamic-routes) to see how it worked. Note: when this path differs from the one provided in `href` the previous `href`/`as` behavior is used as shown in the [previous docs](https://github.com/vercel/next.js/blob/v9.5.2/docs/api-reference/next/link.md#dynamic-routes).
    */
@@ -102,53 +102,62 @@ type InternalLinkPropsBase = {
   onNavigate?: OnNavigateEventHandler
 }
 
-type InternalLinkProps = InternalLinkPropsBase &
-  (
-    | {
-        /**
-         * The path or URL to navigate to. It can also be an object.
-         * Accepts any string for external URLs and backwards compatibility.
-         *
-         * @example https://nextjs.org/docs/api-reference/next/link#with-url-object
-         */
-        href: Url
-        /**
-         * These props are not available when using href
-         */
-        path?: never
-        params?: never
-        searchParams?: never
-      }
-    | {
-        /**
-         * The href property is not available when using path
-         */
-        href?: never
-        /**
-         * The route path template for typed links (e.g., '/blog/[slug]')
-         */
-        path: string
-        /**
-         * Parameters for dynamic route segments (only available with path)
-         */
-        params?: Record<string, string | string[]>
-        /**
-         * Search parameters to append to the URL (only available with path)
-         */
-        searchParams?: Record<string, string | string[]>
-      }
-  )
+export type HrefProps = {
+  /**
+   * **Required**. The path or URL to navigate to. It can also be an object (similar to `URL`).
+   * Accepts any string for external URLs and backwards compatibility.
+   *
+   * @example
+   * ```tsx
+   * // Navigate to /dashboard:
+   * <Link href="/dashboard">Dashboard</Link>
+   *
+   * // External URL:
+   * <Link href="https://example.com">External Site</Link>
+   *
+   * // Navigate to /about?name=test:
+   * <Link href={{ pathname: '/about', query: { name: 'test' } }}>
+   *   About
+   * </Link>
+   * ```
+   *
+   * @remarks
+   * - For external URLs, use a fully qualified URL such as `https://...`.
+   * - In the App Router, dynamic routes must not include bracketed segments in `href`.
+   */
+  href: Url
+
+  /**
+   * These props are not available when using href
+   */
+  path?: never
+  params?: never
+  searchParams?: never
+}
+
+type PathProps = {
+  /**
+   * The href property is not available when using path
+   */
+  href?: never
+  /**
+   * The route path template for typed links (e.g., '/blog/[slug]')
+   */
+  path: string
+  /**
+   * Parameters for dynamic route segments (only available with path)
+   */
+  params?: Record<string, string | string[]>
+  /**
+   * Search parameters to append to the URL (only available with path)
+   */
+  searchParams?: Record<string, string | string[]>
+}
+
+export type LinkProps = InternalLinkProps & (HrefProps | PathProps)
 
 // TODO-APP: Include the full set of Anchor props
 // adding this to the publicly exported type currently breaks existing apps
-
-// `RouteInferType` is a stub here to avoid breaking `typedRoutes` when the type
-// isn't generated yet. It will be replaced when the webpack plugin runs.
-// WARNING: This should be an interface to prevent TypeScript from inlining it
-// in declarations of libraries dependending on Next.js.
-// Not trivial to reproduce so only convert to an interface when needed.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type LinkProps<RouteInferType = any> = InternalLinkProps
 
 const prefetched = new Set<string>()
 

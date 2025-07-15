@@ -770,5 +770,10 @@
   "769": "createSearchParamsFromClient should not be called in a runtime prerender.",
   "770": "createParamsFromClient should not be called in a runtime prerender.",
   "771": "\\`%s\\` was called during a runtime prerender. Next.js should be preventing %s from being included in server components statically, but did not in this case.",
-  "772": "FetchStrategy.PPRRuntime should never be used when `experimental.clientSegmentCache` is disabled"
+  "772": "FetchStrategy.PPRRuntime should never be used when `experimental.clientSegmentCache` is disabled",
+  "773": "Dynamic href \\`%s\\` found in <Link> while using the \\`/app\\` router, this is not supported. Instead, you should use \\`path\\` and \\`params\\` props. Read more: https://nextjs.org/docs/messages/app-dir-dynamic-href",
+  "774": "Invalid <Link> with neither `href` nor `path` prop. You must provide exactly one of these props.",
+  "775": "Invalid <Link> with `params` prop but no `path` prop. `params` can only be used with `path`.",
+  "776": "Invalid <Link> with both `href` and `path` props. You must use exactly one of these props.",
+  "777": "Invalid <Link> with `searchParams` prop but no `path` prop. `searchParams` can only be used with `path`."
 }
