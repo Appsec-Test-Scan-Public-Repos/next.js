@@ -13,11 +13,11 @@ export function constructHref(
     for (const [key, value] of Object.entries(params)) {
       if (Array.isArray(value)) {
         // Handle catch-all routes like [...slug] and [[...slug]]
-        const joinedValue = value.join('/')
+        const joinedValue = value.filter((v) => v !== '').join('/')
+        // Handle optional catch-all [[...slug]] first (more specific pattern)
+        href = href.replace(`[[...${key}]]`, joinedValue)
         // Handle required catch-all [...slug]
         href = href.replace(`[...${key}]`, joinedValue)
-        // Handle optional catch-all [[...slug]]
-        href = href.replace(`[[...${key}]]`, joinedValue)
       } else {
         // Handle regular dynamic routes like [slug]
         href = href.replace(`[${key}]`, value)
