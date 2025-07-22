@@ -367,7 +367,7 @@ export type LinkPropsWithPath<T extends Routes> = LinkRestProps &
         href?: never;
       });
 
-export type LinkProps<RouteType extends string = string> =
+export type LinkProps<RouteType extends string = Routes> =
   | LinkPropsWithHref<RouteType>
   | (RouteType extends Routes ? LinkPropsWithPath<RouteType> : never);
 
@@ -394,7 +394,7 @@ declare module 'next/link' {
    * </Link>
    * \`\`\`
    */
-  export default function Link<RouteType extends string = string>(
+  export default function Link<RouteType extends string = Routes>(
     props: LinkProps<RouteType> & { children: React.ReactNode }
   ): JSX.Element;
 }
