@@ -435,7 +435,7 @@ export default function LinkComponent(
       )
     }
 
-    if (path && !params && !searchParams) {
+    if (path && !params) {
       // Check if path appears to have dynamic segments
       if (path.includes('[') && path.includes(']')) {
         console.warn(
