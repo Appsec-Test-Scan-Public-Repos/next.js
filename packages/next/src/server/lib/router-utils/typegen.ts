@@ -136,116 +136,42 @@ function generateLayoutSlotMap(routesManifest: RouteTypesManifest): string {
   return slotMap
 }
 
-function generateRouteValidationTypes(
-  routesManifest: RouteTypesManifest
-): string {
-  const allRoutes = {
-    ...routesManifest.appRoutes,
-    ...routesManifest.pageRoutes,
-    ...routesManifest.layoutRoutes,
-  }
-
-  // Separate static and dynamic routes
-  const staticRoutes: string[] = []
-  const dynamicRoutes: string[] = []
-
-  for (const [route, routeInfo] of Object.entries(allRoutes)) {
-    const { groups } = routeInfo
-    const hasParams = Object.keys(groups).length > 0
-
-    if (hasParams) {
-      dynamicRoutes.push(route)
-    } else {
-      staticRoutes.push(route)
-    }
-  }
-
-  // Sort routes for consistent output
-  staticRoutes.sort()
-  dynamicRoutes.sort()
-
-  let result = `// Template literal types for route validation
-type SearchOrHash = \`?\${string}\` | \`#\${string}\`
-type WithProtocol = \`\${string}:\${string}\`
-type Suffix = '' | SearchOrHash
-
-type SafeSlug<S extends string> = S extends \`\${string}/\${string}\`
-  ? never
-  : S extends \`\${string}\${SearchOrHash}\`
-  ? never
-  : S extends ''
-  ? never
-  : S
-
-type CatchAllSlug<S extends string> = S extends \`\${string}\${SearchOrHash}\`
-  ? never
-  : S extends ''
-  ? never
-  : S
-
-type OptionalCatchAllSlug<S extends string> =
-  S extends \`\${string}\${SearchOrHash}\` ? never : S
-
-`
-
-  // Generate StaticRoutes
-  if (staticRoutes.length > 0) {
-    result += `type StaticRoutes = ${staticRoutes.map((route) => `\`${route}\``).join(' | ')}\n\n`
-  } else {
-    result += 'type StaticRoutes = never\n\n'
-  }
-
-  // Generate DynamicRoutes template
-  if (dynamicRoutes.length > 0) {
-    result += 'type DynamicRoutes<T extends string = string> = '
-    const dynamicTemplates: string[] = []
-
-    for (const route of dynamicRoutes) {
-      const routeInfo = allRoutes[route]
-      const { groups } = routeInfo
-
-      // Convert route pattern to template literal type
-      let template = route
-      for (const [key, group] of Object.entries(groups)) {
-        if (group.repeat) {
-          if (group.optional) {
-            // Optional catch-all: [[...param]]
-            template = template.replace(
-              `[[...${key}]]`,
-              `\${OptionalCatchAllSlug<T>}`
-            )
-          } else {
-            // Catch-all: [...param]
-            template = template.replace(`[...${key}]`, `\${CatchAllSlug<T>}`)
+// Helper function to format routes to route types (matches the plugin logic exactly)
+function formatRouteToRouteType(route: string) {
+  const isDynamic = isDynamicRoute(route)
+  if (isDynamic) {
+    route = route
+      .split('/')
+      .map((part) => {
+        if (part.startsWith('[') && part.endsWith(']')) {
+          if (part.startsWith('[...')) {
+            // /[...slug]
+            return `\${CatchAllSlug<T>}`
+          } else if (part.startsWith('[[...') && part.endsWith(']]')) {
+            // /[[...slug]]
+            return `\${OptionalCatchAllSlug<T>}`
           }
-        } else {
-          if (group.optional) {
-            // Optional param: [[param]]
-            template = template.replace(`[[${key}]]`, `\${SafeSlug<T>}`)
-          } else {
-            // Regular param: [param]
-            template = template.replace(`[${key}]`, `\${SafeSlug<T>}`)
-          }
+          // /[slug]
+          return `\${SafeSlug<T>}`
         }
-      }
-      dynamicTemplates.push(`\`${template}\``)
-    }
-
-    result += `${dynamicTemplates.join(' | ')}\n\n`
-  } else {
-    result += 'type DynamicRoutes<T extends string = string> = never\n\n'
+        return part
+      })
+      .join('/')
   }
 
-  result += `type ValidRoute<T extends string = string> = 
-  | StaticRoutes
-  | SearchOrHash
-  | WithProtocol
-  | \`\${StaticRoutes}\${SearchOrHash}\`
-  | (T extends \`\${DynamicRoutes<infer _>}\${Suffix}\` ? T : never)
+  return {
+    isDynamic,
+    routeType: route,
+  }
+}
 
-`
-
-  return result
+// Helper function to serialize route types (matches the plugin logic exactly)
+function serializeRouteTypes(routeTypes: string[]) {
+  // route collection is not deterministic, this makes the output of the file deterministic
+  return routeTypes
+    .sort()
+    .map((route) => `\n    | \`${route}\``)
+    .join('')
 }
 
 export function generateRouteTypesFile(
@@ -254,7 +180,37 @@ export function generateRouteTypesFile(
   const routeTypes = generateRouteTypes(routesManifest)
   const paramTypes = generateParamTypes(routesManifest)
   const layoutSlotMap = generateLayoutSlotMap(routesManifest)
-  const routeValidationTypes = generateRouteValidationTypes(routesManifest)
+
+  // Generate serialized static and dynamic routes for the internal namespace
+  const allRoutes = {
+    ...routesManifest.appRoutes,
+    ...routesManifest.pageRoutes,
+    ...routesManifest.layoutRoutes,
+    ...((routesManifest as any).redirectRoutes ?? {}),
+    ...((routesManifest as any).rewriteRoutes ?? {}),
+  }
+
+  const staticRouteTypes: string[] = []
+  const dynamicRouteTypes: string[] = []
+
+  // Process each route using the same logic as the plugin
+  for (const route of Object.keys(allRoutes)) {
+    const { isDynamic, routeType } = formatRouteToRouteType(route)
+    if (isDynamic) {
+      dynamicRouteTypes.push(routeType)
+    } else {
+      staticRouteTypes.push(routeType)
+    }
+  }
+
+  const serializedStaticRouteTypes = serializeRouteTypes(staticRouteTypes)
+  const serializedDynamicRouteTypes = serializeRouteTypes(dynamicRouteTypes)
+
+  // If both StaticRoutes and DynamicRoutes are empty, fallback to type 'string & {}'.
+  const routeTypesFallback =
+    !serializedStaticRouteTypes && !serializedDynamicRouteTypes
+      ? 'string & {}'
+      : ''
 
   return `// This file is generated automatically by Next.js
 // Do not edit this file manually
@@ -268,7 +224,6 @@ export type ParamsOf<Route extends Routes> = ParamMap[Route]
 ${layoutSlotMap}
 
 export type { AppRoutes, PageRoutes, LayoutRoutes, RedirectRoutes, RewriteRoutes }
-${routeValidationTypes}
 
 declare global {
   /**
@@ -303,100 +258,90 @@ declare global {
   }
 }
 
-import type { LinkProps as OriginalLinkProps } from 'next/dist/client/app-dir/link.js';
-import type { UrlObject } from 'url';
-
-type LinkRestProps = Omit<
-  OriginalLinkProps,
-  'href' | 'path' | 'params' | 'searchParams'
->;
-
-/* helper — does this route need params? */
-type NeedsParams<R extends Routes> =
-  keyof ParamsOf<R> extends never ? false : true;
+// Type definitions for Next.js routes
 
 /**
- * Traditional \`href\` navigation with route validation.
- *
- * @example
- * \`\`\`tsx
- * <Link href="/about">About</Link>
- * <Link href="https://example.com">External</Link>
- * <Link href={{ pathname: '/about', query: { tab: 'contact' } }}>About</Link>
- * \`\`\`
+ * Internal types used by the Next.js router and Link component.
+ * These types are not meant to be used directly.
+ * @internal
  */
-export type LinkPropsWithHref<RouteInferType = string> = LinkRestProps & {
-  href: ValidRoute<RouteInferType> | UrlObject;
-  path?: never;
-  params?: never;
-  searchParams?: never;
-};
+declare namespace __next_route_internal_types__ {
+  type SearchOrHash = \`?\${string}\` | \`#\${string}\`
+  type WithProtocol = \`\${string}:\${string}\`
 
-/**
- * Typed \`path\` navigation.
- *
- * * \`params\` is **required** for dynamic routes.  
- * * For static routes it can be omitted or \`{}\`.
- *
- * @example
- * \`\`\`tsx
- * // dynamic
- * <Link path="/blog/[slug]" params={{ slug: 'hello' }}>Post</Link>
- *
- * // static
- * <Link path="/" />
- * <Link path="/" params={{}} />
- * \`\`\`
- */
-export type LinkPropsWithPath<T extends Routes> = LinkRestProps &
-  (NeedsParams<T> extends true
-    ? {
-        /** Route template with dynamic segments. */
-        path: T;
-        /** Parameters matching the template. */
-        params: ParamsOf<T>;
-        searchParams?: Record<string, string | string[]>;
-        href?: never;
-      }
-    : {
-        /** Static route template. */
-        path: T;
-        /** Optional, may pass \`{}\` for symmetry. */
-        params?: Record<never, never>;
-        searchParams?: Record<string, string | string[]>;
-        href?: never;
-      });
+  type Suffix = '' | SearchOrHash
 
-export type LinkProps<RouteType extends string = Routes> =
-  | LinkPropsWithHref<RouteType>
-  | (RouteType extends Routes ? LinkPropsWithPath<RouteType> : never);
+  type SafeSlug<S extends string> = S extends \`\${string}/\${string}\`
+    ? never
+    : S extends \`\${string}\${SearchOrHash}\`
+    ? never
+    : S extends ''
+    ? never
+    : S
+
+  type CatchAllSlug<S extends string> = S extends \`\${string}\${SearchOrHash}\`
+    ? never
+    : S extends ''
+    ? never
+    : S
+
+  type OptionalCatchAllSlug<S extends string> =
+    S extends \`\${string}\${SearchOrHash}\` ? never : S
+
+  type StaticRoutes = ${serializedStaticRouteTypes || 'never'}
+  type DynamicRoutes<T extends string = string> = ${
+    serializedDynamicRouteTypes || 'never'
+  }
+
+  type RouteImpl<T> = ${
+    routeTypesFallback ||
+    `
+    ${
+      // This keeps autocompletion working for static routes.
+      '| StaticRoutes'
+    }
+    | SearchOrHash
+    | WithProtocol
+    | \`\${StaticRoutes}\${SearchOrHash}\`
+    | (T extends \`\${DynamicRoutes<infer _>}\${Suffix}\` ? T : never)
+    `
+  }
+}
+
+declare module 'next' {
+  export { default } from 'next/types.js'
+  export * from 'next/types.js'
+
+  export type Route<T extends string = string> =
+    __next_route_internal_types__.RouteImpl<T>
+}
 
 declare module 'next/link' {
-  /**
-   * A React component that extends the HTML \`<a>\` element to provide
-   * [prefetching](https://nextjs.org/docs/app/building-your-application/routing/linking-and-navigating#2-prefetching)
-   * and client-side navigation. This is the primary way to navigate between routes in Next.js.
-   *
-   * @remarks
-   * - Prefetching is only enabled in production.
-   *
-   * @see https://nextjs.org/docs/app/api-reference/components/link
-   *
-   * @example
-   * \`\`\`tsx
-   * // href mode with route validation
-   * <Link href="/about">About</Link>
-   * <Link href="/blog/my-post">Blog Post</Link>
-   *
-   * // path mode with typed params
-   * <Link path="/blog/[slug]" params={{ slug: 'my-post' }}>
-   *   Blog
-   * </Link>
-   * \`\`\`
-   */
-  export default function Link<RouteType extends string = Routes>(
-    props: LinkProps<RouteType> & { children: React.ReactNode }
-  ): JSX.Element;
+  import type { LinkProps as OriginalLinkProps } from 'next/dist/client/link.js'
+  import type { AnchorHTMLAttributes, DetailedHTMLProps } from 'react'
+  import type { UrlObject } from 'url'
+
+  type LinkRestProps = Omit<
+    Omit<
+      DetailedHTMLProps<
+        AnchorHTMLAttributes<HTMLAnchorElement>,
+        HTMLAnchorElement
+      >,
+      keyof OriginalLinkProps
+    > &
+      OriginalLinkProps,
+    'href'
+  >
+
+  export type LinkProps<RouteInferType> = LinkRestProps & {
+    /**
+     * The path or URL to navigate to. This is the only required prop. It can also be an object.
+     * @see https://nextjs.org/docs/api-reference/next/link
+     */
+    href: __next_route_internal_types__.RouteImpl<RouteInferType> | UrlObject
+  }
+
+  export default function Link<RouteType>(props: LinkProps<RouteType>): JSX.Element
 }
 
 declare module 'next/navigation' {
@@ -408,16 +353,16 @@ declare module 'next/navigation' {
      * Navigate to the provided href.
      * Pushes a new history entry.
      */
-    push<RouteType extends Routes = Routes>(href: ValidRoute<RouteType>, options?: NavigateOptions): void
+    push<RouteType>(href: __next_route_internal_types__.RouteImpl<RouteType>, options?: NavigateOptions): void
     /**
      * Navigate to the provided href.
      * Replaces the current history entry.
      */
-    replace<RouteType extends Routes = Routes>(href: ValidRoute<RouteType>, options?: NavigateOptions): void
+    replace<RouteType>(href: __next_route_internal_types__.RouteImpl<RouteType>, options?: NavigateOptions): void
     /**
      * Prefetch the provided href.
      */
-    prefetch<RouteType extends Routes = Routes>(href: ValidRoute<RouteType>): void
+    prefetch<RouteType>(href: __next_route_internal_types__.RouteImpl<RouteType>): void
   }
 
   export function useRouter(): AppRouterInstance;
@@ -428,17 +373,17 @@ declare module 'next/form' {
 
   type FormRestProps = Omit<OriginalFormProps, 'action'>
 
-  export type FormProps<RouteInferType = string> = {
+  export type FormProps<RouteInferType> = {
     /**
      * \`action\` can be either a \`string\` or a function.
      * - If \`action\` is a string, it will be interpreted as a path or URL to navigate to when the form is submitted.
      *   The path will be prefetched when the form becomes visible.
      * - If \`action\` is a function, it will be called when the form is submitted. See the [React docs](https://react.dev/reference/react-dom/components/form#props) for more.
      */
-    action: ValidRoute<RouteInferType> | ((formData: FormData) => void)
+    action: __next_route_internal_types__.RouteImpl<RouteInferType> | ((formData: FormData) => void)
   } & FormRestProps
 
-  export default function Form<RouteType = string>(props: FormProps<RouteType>): JSX.Element
+  export default function Form<RouteType>(props: FormProps<RouteType>): JSX.Element
 }
 `
 }
