@@ -162,13 +162,13 @@ describe('ReactRefreshLogBox', () => {
            "description": "no",
            "environmentLabel": null,
            "label": "Runtime Error",
-           "source": "index.js (3:7) @ [project]/index.js [ssr] (ecmascript)
+           "source": "index.js (3:7) @ <unknown>
          > 3 | throw new Error('no')
              |       ^",
            "stack": [
-             "[project]/index.js [ssr] (ecmascript) index.js (3:7)",
-             "[project]/pages/index.js [ssr] (ecmascript) <module evaluation> pages/index.js (1:1)",
-             "[project]/pages/index.js [ssr] (ecmascript) pages/index.js (1:1)",
+             "<unknown> index.js (3:7)",
+             "module.exports.__turbopack_context__.s.default pages/index.js (1:1)",
+             "module.exports.m pages/index.js (1:1)",
              "<FIXME-next-dist-dir>",
            ],
          }

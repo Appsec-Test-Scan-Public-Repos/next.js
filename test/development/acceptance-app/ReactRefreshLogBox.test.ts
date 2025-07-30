@@ -93,12 +93,12 @@ describe('ReactRefreshLogBox app', () => {
          "description": "no",
          "environmentLabel": null,
          "label": "Runtime Error",
-         "source": "index.js (3:7) @ [project]/index.js [app-client] (ecmascript)
+         "source": "index.js (3:7) @ <unknown>
        > 3 | throw new Error('no')
            |       ^",
          "stack": [
-           "[project]/index.js [app-client] (ecmascript) index.js (3:7)",
-           "[project]/app/page.js [app-client] (ecmascript) app/page.js (2:1)",
+           "<unknown> index.js (3:7)",
+           "<unknown> app/page.js (2:1)",
          ],
        }
       `)
@@ -1049,7 +1049,7 @@ describe('ReactRefreshLogBox app', () => {
            "Index index.js (2:44)",
            "<FIXME-file-protocol>",
            "<FIXME-file-protocol>",
-           "Page index.js (16:8)",
+           "Page index.js (15:9)",
          ],
        }
       `)
@@ -1570,12 +1570,12 @@ export default function Home() {
          "description": "utils error",
          "environmentLabel": null,
          "label": "Runtime Error",
-         "source": "app/utils.ts (1:7) @ [project]/app/utils.ts [app-client] (ecmascript)
+         "source": "app/utils.ts (1:7) @ <unknown>
        > 1 | throw new Error('utils error')
            |       ^",
          "stack": [
-           "[project]/app/utils.ts [app-client] (ecmascript) app/utils.ts (1:7)",
-           "[project]/app/page.js [app-client] (ecmascript) app/page.js (2:1)",
+           "<unknown> app/utils.ts (1:7)",
+           "<unknown> app/page.js (2:1)",
          ],
        }
       `)

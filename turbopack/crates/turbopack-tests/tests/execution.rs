@@ -191,7 +191,7 @@ async fn run(resource: PathBuf, snapshot_mode: IssueSnapshotMode) -> Result<JsRe
     // Set up a `tracing_subscriber` for debugging -- We can only do this when using nextest, as
     // `cargo test` runs all execution test cases in the same process.
     //
-    // Configuring `tracing_subscriber` requires proces-global side-effects. We can't use a
+    // Configuring `tracing_subscriber` requires process-global side-effects. We can't use a
     // thread-local subscriber because we're not fully single-threaded, even with the
     // `current_thread` tokio executor.
     //
