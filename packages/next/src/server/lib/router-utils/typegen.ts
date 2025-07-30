@@ -188,8 +188,8 @@ export function generateRouteTypesFile(
     ...routesManifest.appRoutes,
     ...routesManifest.pageRoutes,
     ...routesManifest.layoutRoutes,
-    ...((routesManifest as any).redirectRoutes ?? {}),
-    ...((routesManifest as any).rewriteRoutes ?? {}),
+    ...routesManifest.redirectRoutes,
+    ...routesManifest.rewriteRoutes,
   }
 
   const staticRouteTypes: string[] = []

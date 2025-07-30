@@ -1,7 +1,7 @@
 import { nextTestSetup } from 'e2e-utils'
 
 describe('typed-links', () => {
-  const { next, skipped } = nextTestSetup({
+  const { next, isNextStart, skipped } = nextTestSetup({
     files: __dirname,
     skipDeployment: true,
   })
@@ -10,11 +10,12 @@ describe('typed-links', () => {
     return
   }
 
-  it('should pass type checking with valid routes', async () => {
-    await next.stop()
-    await next.patchFile(
-      'app/valid-links.tsx',
-      `
+  if (isNextStart) {
+    it('should pass type checking with valid routes', async () => {
+      await next.stop()
+      await next.patchFile(
+        'app/valid-links.tsx',
+        `
 import Link from 'next/link'
 
 export default function ValidLinks() {
@@ -32,17 +33,17 @@ export default function ValidLinks() {
   )
 }
 `
-    )
+      )
 
-    const { exitCode } = await next.build()
-    expect(exitCode).toBe(0)
-  })
+      const { exitCode } = await next.build()
+      expect(exitCode).toBe(0)
+    })
 
-  it('should work with Route type casting', async () => {
-    await next.stop()
-    await next.patchFile(
-      'app/route-casting.tsx',
-      `
+    it('should work with Route type casting', async () => {
+      await next.stop()
+      await next.patchFile(
+        'app/route-casting.tsx',
+        `
 import type { Route } from 'next'
 import Link from 'next/link'
 
@@ -54,17 +55,17 @@ export default function RouteCasting() {
   )
 }
 `
-    )
+      )
 
-    const { exitCode } = await next.build()
-    expect(exitCode).toBe(0)
-  })
+      const { exitCode } = await next.build()
+      expect(exitCode).toBe(0)
+    })
 
-  it('should fail type checking with invalid routes', async () => {
-    await next.stop()
-    await next.patchFile(
-      'app/invalid-links.tsx',
-      `
+    it('should fail type checking with invalid routes', async () => {
+      await next.stop()
+      await next.patchFile(
+        'app/invalid-links.tsx',
+        `
 import Link from 'next/link'
 
 export default function InvalidLinks() {
@@ -75,12 +76,13 @@ export default function InvalidLinks() {
   )
 }
 `
-    )
+      )
 
-    const { exitCode, cliOutput } = await next.build()
-    expect(exitCode).toBe(1)
-    expect(cliOutput).toContain(
-      `Type error: "/invalid-route" is not an existing route. If it is intentional, please type it explicitly with \`as Route\`.`
-    )
-  })
+      const { exitCode, cliOutput } = await next.build()
+      expect(exitCode).toBe(1)
+      expect(cliOutput).toContain(
+        `Type error: "/invalid-route" is not an existing route. If it is intentional, please type it explicitly with \`as Route\`.`
+      )
+    })
+  }
 })
