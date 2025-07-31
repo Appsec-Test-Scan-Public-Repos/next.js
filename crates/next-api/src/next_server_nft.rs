@@ -2,8 +2,9 @@ use anyhow::Result;
 use either::Either;
 use next_core::get_next_package;
 use serde_json::json;
+use tracing::{Level, instrument};
 use turbo_tasks::{ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, Vc};
-use turbo_tasks_fs::File;
+use turbo_tasks_fs::{File, glob::Glob};
 use turbopack::externals_tracing_module_context;
 use turbopack_core::{
     asset::AssetContent,
@@ -28,9 +29,11 @@ use crate::{nft_json::all_assets_from_entries_filtered, project::Project};
 //     '**/next/dist/server/post-process.js',
 //   ].filter(nonNullable)
 
+#[instrument(level = Level::INFO, skip_all)]
 #[turbo_tasks::function]
 pub(crate) async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<OutputAssets>> {
     let is_standalone = true;
+    let has_next_support = true;
 
     let next_dir = get_next_package(project.project_path().owned().await?).await?;
 
@@ -129,21 +132,92 @@ pub(crate) async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<Ou
         .try_join()
         .await?;
 
+    let shared_ignores = [
+        "**/next/dist/compiled/next-server/**/*.dev.js",
+        "**/next/dist/compiled/webpack/*",
+        "**/node_modules/webpack5/**/*",
+        "**/next/dist/server/lib/route-resolver*",
+        "next/dist/compiled/semver/semver/**/*.js",
+        // ...additionalIgnores,
+    ]
+    .into_iter()
+    //   .chain(!hasSsrAmpPages
+    //     ? ["**/next/dist/compiled/@ampproject/toolbox-optimizer/**/*"]
+    //     : [])
+    .chain(if has_next_support {
+        // only ignore image-optimizer code when
+        // this is being handled outside of next-server
+        Some("**/next/dist/server/image-optimizer.js").into_iter()
+    } else {
+        None.into_iter()
+    })
+    .chain(
+        if is_standalone {
+            None.into_iter()
+        } else {
+            Some([
+                "**/next/dist/compiled/jest-worker/**/*",
+                "**/*/next/dist/server/next.js",
+                "**/*/next/dist/bin/next",
+            ])
+            .into_iter()
+        }
+        .flatten(),
+    )
+    .map(|g| Glob::new(g.into()))
+    .collect::<Vec<_>>();
+
+    let server_ignores_glob = Glob::alternatives(
+        [
+            "**/node_modules/react{,-dom,-dom-server-turbopack}/**/*.development.js",
+            "**/*.d.ts",
+            "**/*.map",
+            "**/next/dist/pages/**/*",
+        ]
+        .into_iter()
+        .chain(
+            if has_next_support {
+                Some(["**/node_modules/sharp/**/*", "**/@img/sharp-libvips*/**/*"]).into_iter()
+            } else {
+                None.into_iter()
+            }
+            .flatten(),
+        )
+        .map(|g| Glob::new(g.into()))
+        .chain(shared_ignores.iter().copied())
+        .collect(),
+    );
+
+    let minimal_server_ignores_glob = Glob::alternatives(
+        [
+            "**/next/dist/compiled/edge-runtime/**/*",
+            "**/next/dist/server/web/sandbox/**/*",
+            "**/next/dist/server/post-process.js",
+        ]
+        .into_iter()
+        .map(|g| Glob::new(g.into()))
+        .chain(shared_ignores)
+        .collect(),
+    );
+
     let mut server_output_assets =
-        all_assets_from_entries_filtered(Vc::cell(server_entries), None, None)
+        all_assets_from_entries_filtered(Vc::cell(server_entries), None, Some(server_ignores_glob))
             .await?
             .iter()
             .map(|m| m.path())
             .try_join()
             .await?;
     server_output_assets.sort_by_key(|k| k.path.clone());
-    let mut minimal_server_output_assets =
-        all_assets_from_entries_filtered(Vc::cell(minimal_server_entries), None, None)
-            .await?
-            .iter()
-            .map(|m| m.path())
-            .try_join()
-            .await?;
+    let mut minimal_server_output_assets = all_assets_from_entries_filtered(
+        Vc::cell(minimal_server_entries),
+        None,
+        Some(minimal_server_ignores_glob),
+    )
+    .await?
+    .iter()
+    .map(|m| m.path())
+    .try_join()
+    .await?;
     minimal_server_output_assets.sort_by_key(|k| k.path.clone());
 
     if is_standalone {
