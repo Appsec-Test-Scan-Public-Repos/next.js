@@ -29,6 +29,8 @@ use crate::{nft_json::all_assets_from_entries_filtered, project::Project};
 //     '**/next/dist/server/post-process.js',
 //   ].filter(nonNullable)
 
+// TODO snapshot test for next-minimal-server ?
+
 #[instrument(level = Level::INFO, skip_all)]
 #[turbo_tasks::function]
 pub(crate) async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<OutputAssets>> {
@@ -137,13 +139,20 @@ pub(crate) async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<Ou
         "**/next/dist/compiled/webpack/*",
         "**/node_modules/webpack5/**/*",
         "**/next/dist/server/lib/route-resolver*",
-        "next/dist/compiled/semver/semver/**/*.js",
+        "**/next/dist/compiled/semver/semver/**/*.js",
         // ...additionalIgnores,
+        // Turbopack doesn't support AMP
+        "**/next/dist/compiled/@ampproject/toolbox-optimizer/**/*",
+        // Added for Turbopack
+        "**/next/dist/server/lib/router-utils/setup-dev-bundler.js",
+        "**/next/dist/server/dev/**",
+        "**/next/dist/client/dev/**",
+        "**/next/dist/build/swc/index.js",
+        "**/next/dist/build/next-config-ts/transpile-config.js",
+        "**/next/dist/next-devtools/**",
+        "**/next/dist/cli/next-test.js",
     ]
     .into_iter()
-    //   .chain(!hasSsrAmpPages
-    //     ? ["**/next/dist/compiled/@ampproject/toolbox-optimizer/**/*"]
-    //     : [])
     .chain(if has_next_support {
         // only ignore image-optimizer code when
         // this is being handled outside of next-server
@@ -277,6 +286,14 @@ pub(crate) async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<Ou
         addToTracedFiles(root, relativeModulePath, minimalServerTracedFiles)
       }
     */
+
+    println!(
+        "{:?}",
+        project
+            .node_root()
+            .await?
+            .join("next-server.turbo.nft.json")?,
+    );
 
     Ok(Vc::cell(vec![
         ResolvedVc::upcast(
