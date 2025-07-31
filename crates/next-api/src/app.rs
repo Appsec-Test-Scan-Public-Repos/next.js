@@ -1721,8 +1721,6 @@ impl AppEndpoint {
                         .to_resolved()
                         .await?,
                     ));
-
-                    server_assets.extend(next_server_nft_assets().await?.iter());
                 }
 
                 AppEndpointOutput::NodeJs {
@@ -1735,6 +1733,16 @@ impl AppEndpoint {
             }
         }
         .cell();
+
+        if this
+            .app_project
+            .project()
+            .next_mode()
+            .await?
+            .is_production()
+        {
+            server_assets.extend(next_server_nft_assets(project).await?.iter());
+        }
 
         Ok(endpoint_output)
     }

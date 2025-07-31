@@ -643,7 +643,7 @@ async fn process_default_internal(
 }
 
 #[turbo_tasks::function]
-async fn externals_tracing_module_context(ty: ExternalType) -> Result<Vc<ModuleAssetContext>> {
+pub async fn externals_tracing_module_context(ty: ExternalType) -> Result<Vc<ModuleAssetContext>> {
     let env = Environment::new(ExecutionEnvironment::NodeJsLambda(
         NodeJsEnvironment::default().resolved_cell(),
     ))

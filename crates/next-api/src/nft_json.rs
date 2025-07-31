@@ -207,7 +207,8 @@ impl Asset for NftJsonAsset {
 
         // Collect base assets first
         for referenced_chunk in
-            all_assets_from_entries_filtered(Vc::cell(entries), client_root, exclude_glob).await?
+            all_assets_from_entries_filtered(Vc::cell(entries), Some(client_root), exclude_glob)
+                .await?
         {
             if chunk.eq(referenced_chunk) {
                 continue;
@@ -287,9 +288,9 @@ impl Asset for NftJsonAsset {
 /// Walks the asset graph from multiple assets and collect all referenced
 /// assets, but filters out all client assets and glob matches.
 #[turbo_tasks::function]
-async fn all_assets_from_entries_filtered(
+pub async fn all_assets_from_entries_filtered(
     entries: Vc<OutputAssets>,
-    client_root: FileSystemPath,
+    client_root: Option<FileSystemPath>,
     exclude_glob: Option<Vc<Glob>>,
 ) -> Result<Vc<OutputAssets>> {
     let exclude_glob = if let Some(exclude_glob) = exclude_glob {
@@ -316,7 +317,7 @@ async fn all_assets_from_entries_filtered(
 /// glob matches.
 async fn get_referenced_server_assets(
     asset: ResolvedVc<Box<dyn OutputAsset>>,
-    client_root: &FileSystemPath,
+    client_root: &Option<FileSystemPath>,
     exclude_glob: &Option<ReadRef<Glob>>,
 ) -> Result<Vec<ResolvedVc<Box<dyn OutputAsset>>>> {
     asset
@@ -325,7 +326,9 @@ async fn get_referenced_server_assets(
         .iter()
         .map(async |asset| {
             let asset_path = asset.path().await?;
-            if asset_path.is_inside_ref(client_root) {
+            if let Some(client_root) = client_root
+                && asset_path.is_inside_ref(client_root)
+            {
                 return Ok(None);
             }
 
