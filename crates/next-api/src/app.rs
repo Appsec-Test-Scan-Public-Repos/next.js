@@ -78,6 +78,7 @@ use crate::{
     font::create_font_manifest,
     loadable_manifest::create_react_loadable_manifest,
     module_graph::get_global_information_for_endpoint,
+    next_server_nft::next_server_nft_assets,
     nft_json::NftJsonAsset,
     paths::{
         all_paths_in_root, all_server_paths, get_asset_paths_from_root, get_js_paths_from_root,
@@ -1720,6 +1721,8 @@ impl AppEndpoint {
                         .to_resolved()
                         .await?,
                     ));
+
+                    server_assets.extend(next_server_nft_assets().await?.iter());
                 }
 
                 AppEndpointOutput::NodeJs {
