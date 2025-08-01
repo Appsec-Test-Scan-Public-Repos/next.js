@@ -344,7 +344,7 @@ impl Visit<(ResolvedVc<Box<dyn OutputAsset>>, ReadRef<RcStr>)> for NftVisit {
         let client_root = self.client_root.clone();
         let exclude_glob = self.exclude_glob.clone();
         let node = node.0;
-        async move { Ok(get_referenced_server_assets(node, client_root, exclude_glob).await?) }
+        get_referenced_server_assets(node, client_root, exclude_glob)
     }
 
     fn span(&mut self, node: &(ResolvedVc<Box<dyn OutputAsset>>, ReadRef<RcStr>)) -> tracing::Span {
