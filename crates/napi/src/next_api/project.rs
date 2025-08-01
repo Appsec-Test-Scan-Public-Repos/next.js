@@ -975,27 +975,28 @@ async fn output_assets_operation(
     container: ResolvedVc<ProjectContainer>,
     app_dir_only: bool,
 ) -> Result<Vc<OutputAssets>> {
-    let endpoint_assets = container
-        .project()
-        .get_all_endpoints(app_dir_only)
-        .await?
-        .iter()
-        .map(|endpoint| async move { endpoint.output().await?.output_assets.await })
-        .try_join()
-        .await?;
+    // let endpoint_assets = container
+    //     .project()
+    //     .get_all_endpoints(app_dir_only)
+    //     .await?
+    //     .iter()
+    //     .map(|endpoint| async move { endpoint.output().await?.output_assets.await })
+    //     .try_join()
+    //     .await?;
 
-    let output_assets: FxIndexSet<ResolvedVc<Box<dyn OutputAsset>>> = endpoint_assets
-        .iter()
-        .flat_map(|assets| assets.iter().copied())
-        .collect();
+    // let output_assets: FxIndexSet<ResolvedVc<Box<dyn OutputAsset>>> = endpoint_assets
+    //     .iter()
+    //     .flat_map(|assets| assets.iter().copied())
+    //     .collect();
 
     let nft = next_server_nft_assets(container.project()).await?;
 
     Ok(Vc::cell(
-        output_assets
-            .into_iter()
-            .chain(nft.iter().copied())
-            .collect(),
+        // output_assets
+        //     .into_iter()
+        //     .chain(nft.iter().copied())
+        //     .collect(),
+        nft.iter().copied().collect(),
     ))
 }
 

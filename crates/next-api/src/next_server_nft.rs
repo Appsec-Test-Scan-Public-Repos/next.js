@@ -112,13 +112,13 @@ pub async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<OutputAss
         .try_join()
         .await?;
 
-    let minimal_server_entries = shared_entries
-        .iter()
-        .copied()
-        .chain(resolve_entry("next/dist/compiled/next-server/server.runtime.prod").await?)
-        .map(|m| Vc::upcast::<Box<dyn OutputAsset>>(TracedAsset::new(m)).to_resolved())
-        .try_join()
-        .await?;
+    // let minimal_server_entries = shared_entries
+    //     .iter()
+    //     .copied()
+    //     .chain(resolve_entry("next/dist/compiled/next-server/server.runtime.prod").await?)
+    //     .map(|m| Vc::upcast::<Box<dyn OutputAsset>>(TracedAsset::new(m)).to_resolved())
+    //     .try_join()
+    //     .await?;
 
     let server_ignores_glob = [
         "**/node_modules/react{,-dom,-dom-server-turbopack}/**/*.development.js",
@@ -203,16 +203,16 @@ pub async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<OutputAss
             .to_resolved()
             .await?,
         ),
-        ResolvedVc::upcast(
-            ServerNftJsonAsset::new(
-                project,
-                RcStr::from("next-minimal-server.turbo"),
-                Vc::cell(minimal_server_entries),
-                minimal_server_ignores_glob,
-            )
-            .to_resolved()
-            .await?,
-        ),
+        // ResolvedVc::upcast(
+        //     ServerNftJsonAsset::new(
+        //         project,
+        //         RcStr::from("next-minimal-server.turbo"),
+        //         Vc::cell(minimal_server_entries),
+        //         minimal_server_ignores_glob,
+        //     )
+        //     .to_resolved()
+        //     .await?,
+        // ),
     ]))
 }
 
