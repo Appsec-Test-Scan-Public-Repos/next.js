@@ -2006,9 +2006,9 @@ async fn handle_call<G: Fn(Vec<Effect>) + Send + Sync>(
                         errors::failed_to_analyse::ecmascript::PATH_METHOD.to_string(),
                     ),
                 );
-                if ignore_dynamic_requests {
-                    return Ok(());
-                }
+                // if ignore_dynamic_requests {
+                return Ok(());
+                // }
             }
             analysis.add_reference(
                 FileSourceReference::new(*source, Pattern::new(pat))
@@ -2044,9 +2044,9 @@ async fn handle_call<G: Fn(Vec<Effect>) + Send + Sync>(
                         errors::failed_to_analyse::ecmascript::PATH_METHOD.to_string(),
                     ),
                 );
-                if ignore_dynamic_requests {
-                    return Ok(());
-                }
+                // if ignore_dynamic_requests {
+                return Ok(());
+                // }
             }
             analysis.add_reference(
                 DirAssetReference::new(*source, Pattern::new(pat))
