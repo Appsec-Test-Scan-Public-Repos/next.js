@@ -1216,6 +1216,11 @@ impl NextConfig {
     }
 
     #[turbo_tasks::function]
+    pub fn ci_has_next_support(&self) -> Vc<bool> {
+        Vc::cell(self.env.contains_key("NOW_BUILDER"))
+    }
+
+    #[turbo_tasks::function]
     pub fn cache_handler(&self) -> Vc<Option<RcStr>> {
         Vc::cell(self.cache_handler.clone())
     }

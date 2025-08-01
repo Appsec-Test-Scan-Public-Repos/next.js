@@ -4,7 +4,7 @@ use next_core::get_next_package;
 use serde_json::json;
 use tracing::{Instrument, Level, instrument};
 use turbo_rcstr::RcStr;
-use turbo_tasks::{ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, Vc};
 use turbo_tasks_fs::{DirectoryContent, DirectoryEntry, File, FileSystemPath, glob::Glob};
 use turbopack::externals_tracing_module_context;
 use turbopack_core::{
@@ -34,15 +34,17 @@ use crate::{nft_json::all_assets_from_entries_filtered, project::Project};
 #[instrument(level = Level::INFO, skip_all)]
 #[turbo_tasks::function]
 pub async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<OutputAssets>> {
-    let is_standalone = true;
-    let has_next_support = true;
-
-    let next_dir = get_next_package(project.project_path().owned().await?).await?;
+    let is_standalone = *project.next_config().is_standalone().await?;
+    let has_next_support = *project.next_config().ci_has_next_support().await?;
 
     let asset_context = Vc::upcast(externals_tracing_module_context(ExternalType::CommonJs));
 
-    let next_resolve_origin =
-        Vc::upcast(PlainResolveOrigin::new(asset_context, next_dir.join("_")?));
+    let next_resolve_origin = Vc::upcast(PlainResolveOrigin::new(
+        asset_context,
+        get_next_package(project.project_path().owned().await?)
+            .await?
+            .join("_")?,
+    ));
 
     let resolve_entry = async |path: &str| {
         Ok(cjs_resolve(
@@ -64,6 +66,7 @@ pub async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<OutputAss
             .try_flat_join()
             .await?;
 
+    // TODO
     //   const { cacheHandler } = config
     //   const { cacheHandlers } = config.experimental
     //   // ensure we trace any dependencies needed for custom
@@ -90,16 +93,6 @@ pub async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<OutputAss
     //       }
     //     }
     //   }
-
-    // ...sharedEntriesSet,
-    //         ...(isStandalone
-    //           ? [
-    //               require.resolve('next/dist/server/lib/start-server'),
-    //               require.resolve('next/dist/server/next'),
-    //               require.resolve('next/dist/server/require-hook'),
-    //             ]
-    //           : []),
-    //         require.resolve('next/dist/server/next-server'),
 
     let server_entries = shared_entries
         .iter()
