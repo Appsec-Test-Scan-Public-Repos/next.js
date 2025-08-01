@@ -2,31 +2,31 @@ use std::{cmp::Ordering, collections::BinaryHeap};
 
 use anyhow::Result;
 
-use crate::lookup_entry::LookupEntry;
+use crate::lookup_entry::IterEntry;
 
 /// An active iterator that is being merged. It has peeked the next element and can be compared
 /// according to that element. The `order` is used when multiple iterators have the same key.
-struct ActiveIterator<T: Iterator<Item = Result<LookupEntry>>> {
+struct ActiveIterator<'l, T: Iterator<Item = Result<IterEntry<'l>>>> {
     iter: T,
     order: usize,
-    entry: LookupEntry,
+    entry: IterEntry<'l>,
 }
 
-impl<T: Iterator<Item = Result<LookupEntry>>> PartialEq for ActiveIterator<T> {
+impl<'l, T: Iterator<Item = Result<IterEntry<'l>>>> PartialEq for ActiveIterator<'l, T> {
     fn eq(&self, other: &Self) -> bool {
         self.entry.hash == other.entry.hash && *self.entry.key == *other.entry.key
     }
 }
 
-impl<T: Iterator<Item = Result<LookupEntry>>> Eq for ActiveIterator<T> {}
+impl<'l, T: Iterator<Item = Result<IterEntry<'l>>>> Eq for ActiveIterator<'l, T> {}
 
-impl<T: Iterator<Item = Result<LookupEntry>>> PartialOrd for ActiveIterator<T> {
+impl<'l, T: Iterator<Item = Result<IterEntry<'l>>>> PartialOrd for ActiveIterator<'l, T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<T: Iterator<Item = Result<LookupEntry>>> Ord for ActiveIterator<T> {
+impl<'l, T: Iterator<Item = Result<IterEntry<'l>>>> Ord for ActiveIterator<'l, T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.entry
             .hash
@@ -39,11 +39,11 @@ impl<T: Iterator<Item = Result<LookupEntry>>> Ord for ActiveIterator<T> {
 
 /// An iterator that merges multiple sorted iterators into a single sorted iterator. Internal it
 /// uses an heap of iterators to iterate them in order.
-pub struct MergeIter<T: Iterator<Item = Result<LookupEntry>>> {
-    heap: BinaryHeap<ActiveIterator<T>>,
+pub struct MergeIter<'l, T: Iterator<Item = Result<IterEntry<'l>>>> {
+    heap: BinaryHeap<ActiveIterator<'l, T>>,
 }
 
-impl<T: Iterator<Item = Result<LookupEntry>>> MergeIter<T> {
+impl<'l, T: Iterator<Item = Result<IterEntry<'l>>>> MergeIter<'l, T> {
     pub fn new(iters: impl Iterator<Item = T>) -> Result<Self> {
         let mut heap = BinaryHeap::new();
         for (order, mut iter) in iters.enumerate() {
@@ -56,8 +56,8 @@ impl<T: Iterator<Item = Result<LookupEntry>>> MergeIter<T> {
     }
 }
 
-impl<T: Iterator<Item = Result<LookupEntry>>> Iterator for MergeIter<T> {
-    type Item = Result<LookupEntry>;
+impl<'l, T: Iterator<Item = Result<IterEntry<'l>>>> Iterator for MergeIter<'l, T> {
+    type Item = Result<IterEntry<'l>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let ActiveIterator {

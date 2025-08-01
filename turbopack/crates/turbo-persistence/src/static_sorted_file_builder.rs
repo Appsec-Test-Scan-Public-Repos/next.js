@@ -68,6 +68,11 @@ pub enum EntryValue<'l> {
     Small { value: &'l [u8] },
     /// Medium-sized value. They are stored in their own value block.
     Medium { value: &'l [u8] },
+    /// Medium-sized value. They are stored in their own value block. Precompressed.
+    MediumCompressed {
+        uncompressed_size: u32,
+        block: &'l [u8],
+    },
     /// Large-sized value. They are stored in a blob file.
     Large { blob: u32 },
     /// Tombstone. The value was removed.
@@ -332,6 +337,26 @@ impl<'l> BlockWriter<'l> {
         Ok(())
     }
 
+    fn write_compressed_block(&mut self, uncompressed_size: u32, block: &[u8]) -> Result<()> {
+        let len = (block.len() + 4).try_into().unwrap();
+        let offset = self
+            .block_offsets
+            .last()
+            .copied()
+            .unwrap_or_default()
+            .checked_add(len)
+            .expect("Block offset overflow");
+        self.block_offsets.push(offset);
+
+        self.writer
+            .write_u32::<BE>(uncompressed_size)
+            .context("Failed to write uncompressed size")?;
+        self.writer
+            .write_all(block)
+            .context("Failed to write compressed block")?;
+        Ok(())
+    }
+
     /// Compresses a block with a compression dictionary.
     #[tracing::instrument(level = "trace", skip_all)]
     fn compress_block_into_buffer(&mut self, block: &[u8], dict: &[u8]) {
@@ -386,7 +411,15 @@ fn write_value_blocks(
                 value_locations.push((block_index, 0));
                 writer.write_value_block(value, value_compression_dictionary)?;
             }
-            _ => {
+            EntryValue::MediumCompressed {
+                uncompressed_size,
+                block,
+            } => {
+                let block_index = writer.next_block_index();
+                value_locations.push((block_index, 0));
+                writer.write_compressed_block(uncompressed_size, block)?;
+            }
+            EntryValue::Deleted | EntryValue::Large { .. } => {
                 value_locations.push((0, 0));
             }
         }
@@ -438,7 +471,7 @@ fn write_key_blocks_and_compute_amqf(
                     value.len().try_into().unwrap(),
                 );
             }
-            EntryValue::Medium { .. } => {
+            EntryValue::Medium { .. } | EntryValue::MediumCompressed { .. } => {
                 block.put_medium(entry, value_location.0);
             }
             EntryValue::Large { blob } => {

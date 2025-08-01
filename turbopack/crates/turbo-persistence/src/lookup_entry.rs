@@ -14,28 +14,42 @@ pub enum LookupValue {
     Blob { sequence_number: u32 },
 }
 
-impl LookupValue {
+/// A value from a SST file lookup.
+pub enum IterValue<'l> {
+    /// A LookupValue
+    Value(LookupValue),
+    /// A medium sized value that is still compressed.
+    MediumCompressed {
+        uncompressed_size: u32,
+        block: &'l [u8],
+    },
+}
+
+impl IterValue<'_> {
     /// Returns the size of the value in the SST file.
     pub fn size_in_sst(&self) -> usize {
         match self {
-            LookupValue::Slice { value } => value.len(),
-            LookupValue::Deleted => 0,
-            LookupValue::Blob { .. } => 0,
+            IterValue::Value(LookupValue::Slice { value }) => value.len(),
+            IterValue::Value(LookupValue::Deleted) => 0,
+            IterValue::Value(LookupValue::Blob { .. }) => 0,
+            IterValue::MediumCompressed {
+                uncompressed_size, ..
+            } => *uncompressed_size as usize,
         }
     }
 }
 
 /// An entry from a SST file lookup.
-pub struct LookupEntry {
+pub struct IterEntry<'l> {
     /// The hash of the key.
     pub hash: u64,
     /// The key.
     pub key: ArcSlice<u8>,
     /// The value.
-    pub value: LookupValue,
+    pub value: IterValue<'l>,
 }
 
-impl Entry for LookupEntry {
+impl Entry for IterEntry<'_> {
     fn key_hash(&self) -> u64 {
         self.hash
     }
@@ -50,16 +64,23 @@ impl Entry for LookupEntry {
 
     fn value(&self) -> EntryValue<'_> {
         match &self.value {
-            LookupValue::Deleted => EntryValue::Deleted,
-            LookupValue::Slice { value } => {
+            IterValue::Value(LookupValue::Deleted) => EntryValue::Deleted,
+            IterValue::Value(LookupValue::Slice { value }) => {
                 if value.len() > MAX_SMALL_VALUE_SIZE {
                     EntryValue::Medium { value }
                 } else {
                     EntryValue::Small { value }
                 }
             }
-            LookupValue::Blob { sequence_number } => EntryValue::Large {
+            IterValue::Value(LookupValue::Blob { sequence_number }) => EntryValue::Large {
                 blob: *sequence_number,
+            },
+            IterValue::MediumCompressed {
+                uncompressed_size,
+                block,
+            } => EntryValue::MediumCompressed {
+                uncompressed_size: *uncompressed_size,
+                block,
             },
         }
     }

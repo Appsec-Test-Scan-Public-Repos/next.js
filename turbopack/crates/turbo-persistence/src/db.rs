@@ -30,7 +30,7 @@ use crate::{
         VALUE_BLOCK_CACHE_SIZE,
     },
     key::{StoreKey, hash_key},
-    lookup_entry::{LookupEntry, LookupValue},
+    lookup_entry::{IterEntry, LookupValue},
     merge_iter::MergeIter,
     meta_file::{AmqfCache, MetaFile, MetaLookupResult, StaticSortedFileRange},
     meta_file_builder::MetaFileBuilder,
@@ -910,8 +910,8 @@ impl<S: ParallelScheduler> TurboPersistence<S> {
                                 });
                             }
 
-                            fn create_sst_file(
-                                entries: &[LookupEntry],
+                            fn create_sst_file<'l>(
+                                entries: &[IterEntry<'l>],
                                 total_key_size: usize,
                                 total_value_size: usize,
                                 path: &Path,
@@ -953,7 +953,7 @@ impl<S: ParallelScheduler> TurboPersistence<S> {
 
                             let mut total_key_size = 0;
                             let mut total_value_size = 0;
-                            let mut current: Option<LookupEntry> = None;
+                            let mut current: Option<IterEntry<'_>> = None;
                             let mut entries = Vec::new();
                             let mut last_entries = Vec::new();
                             let mut last_entries_total_sizes = (0, 0);
