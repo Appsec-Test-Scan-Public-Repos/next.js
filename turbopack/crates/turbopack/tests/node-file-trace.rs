@@ -38,6 +38,7 @@ use turbopack::{
     register,
 };
 use turbopack_core::{
+    chunk::SourceMapsType,
     compile_time_info::CompileTimeInfo,
     context::AssetContext,
     environment::{Environment, ExecutionEnvironment, NodeJsEnvironment},
@@ -351,16 +352,18 @@ async fn node_file_trace_operation(
     ));
     let module_asset_context = ModuleAssetContext::new(
         Default::default(),
-        // TODO It's easy to make a mistake here as this should match the config in the
-        // binary. TODO These test cases should move into the
-        // `node-file-trace` crate and use the same config.
+        // TODO These test cases should move into the `node-file-trace` crate and use the same
+        // config.
+        // It's easy to make a mistake here as this should match the config in the binary from
+        // turbopack/crates/turbopack/src/lib.rs
         CompileTimeInfo::new(environment),
         ModuleOptionsContext {
             ecmascript: EcmascriptOptionsContext {
-                enable_types: true,
+                source_maps: SourceMapsType::None,
                 ..Default::default()
             },
             css: CssOptionsContext {
+                source_maps: SourceMapsType::None,
                 enable_raw_css: true,
                 ..Default::default()
             },

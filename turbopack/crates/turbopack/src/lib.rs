@@ -651,12 +651,13 @@ pub async fn externals_tracing_module_context(ty: ExternalType) -> Result<Vc<Mod
     .await?;
 
     let resolve_options = ResolveOptionsContext {
+        enable_node_native_modules: true,
         emulate_environment: Some(env),
         loose_errors: true,
         custom_conditions: match ty {
-            ExternalType::CommonJs => vec![rcstr!("require")],
-            ExternalType::EcmaScriptModule => vec![rcstr!("import")],
-            ExternalType::Url | ExternalType::Global | ExternalType::Script => vec![],
+            ExternalType::CommonJs => vec![rcstr!("require"), rcstr!("node")],
+            ExternalType::EcmaScriptModule => vec![rcstr!("import"), rcstr!("node")],
+            ExternalType::Url | ExternalType::Global | ExternalType::Script => vec![rcstr!("node")],
         },
         ..Default::default()
     };
@@ -674,6 +675,7 @@ pub async fn externals_tracing_module_context(ty: ExternalType) -> Result<Vc<Mod
             },
             css: CssOptionsContext {
                 source_maps: SourceMapsType::None,
+                enable_raw_css: true,
                 ..Default::default()
             },
             // Environment is not passed in order to avoid downleveling JS / CSS for
