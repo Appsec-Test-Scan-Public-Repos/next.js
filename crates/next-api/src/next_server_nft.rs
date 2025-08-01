@@ -133,7 +133,7 @@ pub async fn next_server_nft_assets(project: Vc<Project>) -> Result<Vc<OutputAss
         // ...additionalIgnores,
         // Turbopack doesn't support AMP
         "**/next/dist/compiled/@ampproject/toolbox-optimizer/**/*",
-        // Added for Turbopack
+        // The following were added for Turbopack
         "**/next/dist/server/lib/router-utils/setup-dev-bundler.js",
         "**/next/dist/server/dev/**",
         "**/next/dist/client/dev/**",
@@ -278,7 +278,6 @@ impl Asset for ServerNftJsonAsset {
                             .get_relative_path_to(&*m.path().await?)
                             .context("failed to compute relative path for server nft.json")
                     })
-                    // .map(async |m| Ok(format!("../../../{}", m.path().await?.path.clone())))
                     .try_join()
                     .await?;
             server_output_assets.sort();
